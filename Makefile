@@ -16,7 +16,7 @@ SD_PATH      = lib/softdevice/$(SD_FILENAME)
 TUSB_PATH    = lib/tinyusb/src
 NRFX_PATH    = lib/nrfx
 
-SD_VERSION   = 6.1.1
+SD_VERSION   = 7.0.1
 SD_FILENAME  = $(SD_NAME)_nrf52_$(SD_VERSION)
 SD_API_PATH  = $(SD_PATH)/$(SD_FILENAME)_API
 SD_HEX       = $(SD_PATH)/$(SD_FILENAME)_softdevice.hex
@@ -144,6 +144,14 @@ C_SOURCE_FILES += $(SDK_PATH)/libraries/hci/hci_mem_pool.c
 C_SOURCE_FILES += $(SDK_PATH)/libraries/hci/hci_slip.c
 C_SOURCE_FILES += $(SDK_PATH)/libraries/hci/hci_transport.c
 C_SOURCE_FILES += $(SDK_PATH)/libraries/util/nrf_assert.c
+
+C_SOURCE_FILES += $(SDK_PATH)/libraries/uart/app_uart.c
+C_SOURCE_FILES += $(SDK_PATH)/drivers_nrf/uart/nrf_drv_uart.c
+C_SOURCE_FILES += $(SDK_PATH)/drivers_nrf/common/nrf_drv_common.c
+
+IPATH += $(SDK11_PATH)/libraries/util
+IPATH += $(SDK_PATH)/drivers_nrf/common
+IPATH += $(SDK_PATH)/drivers_nrf/uart
 
 # UART or USB Serial
 ifeq ($(MCU_SUB_VARIANT),nrf52)

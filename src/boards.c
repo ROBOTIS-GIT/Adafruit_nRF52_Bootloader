@@ -40,6 +40,12 @@
 #endif
 
 //------------- IMPLEMENTATION -------------//
+void power_init(uint32_t pin, uint32_t enable_state)
+{
+  nrf_gpio_cfg_output(pin);
+  nrf_gpio_pin_write(pin, enable_state);
+}
+
 void button_init(uint32_t pin)
 {
   if ( BUTTON_PULL == NRF_GPIO_PIN_PULLDOWN )
@@ -66,6 +72,8 @@ void board_init(void)
   // Use Internal OSC to compatible with all boards
   NRF_CLOCK->LFCLKSRC = CLOCK_LFCLKSRC_SRC_RC;
   NRF_CLOCK->TASKS_LFCLKSTART = 1UL;
+
+  power_init(POWER_ENABLE_PIN, POWER_ENABLE_STATE);
 
   button_init(BUTTON_DFU);
   button_init(BUTTON_FRESET);

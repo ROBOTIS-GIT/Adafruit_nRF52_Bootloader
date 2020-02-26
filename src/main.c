@@ -67,6 +67,11 @@
 #include "pstorage.h"
 #include "nrfx_nvmc.h"
 
+#include "nrf_uart.h"
+#include "app_uart.h"
+
+//#define DEBUG_CODE_ENABLE
+
 
 #ifdef NRF_USBD
 #include "nrf_usbd.h"
@@ -119,6 +124,13 @@ enum { BLE_CONN_CFG_HIGH_BANDWIDTH = 1 };
 // Adafruit for factory reset
 #define APPDATA_ADDR_START              (BOOTLOADER_REGION_START-DFU_APP_DATA_RESERVED)
 
+#define UART_TX_BUF_SIZE 256                         /**< UART TX buffer size. */
+#define UART_RX_BUF_SIZE 256                         /**< UART RX buffer size. */
+
+#define RX_PIN_NUMBER 8
+#define TX_PIN_NUMBER 6
+
+
 #ifdef NRF52840_XXAA
   // Flash 1024 KB
   STATIC_ASSERT( APPDATA_ADDR_START == 0xED000);
@@ -132,11 +144,35 @@ enum { BLE_CONN_CFG_HIGH_BANDWIDTH = 1 };
 void adafruit_factory_reset(void);
 static uint32_t softdev_init(bool init_softdevice);
 
+void TxDByte16(uint8_t bSentData);
+void TxDWord16(uint16_t wSentData);
+void TxDLong16(uint32_t lSentData);
+void TxDString(char *bData);
+
+
 uint32_t* dbl_reset_mem = ((uint32_t*)  DFU_DBL_RESET_MEM );
 
 // true if ble, false if serial
 bool _ota_dfu = false;
 bool _ota_connected = false;
+
+bool uart_tx_done = true;
+
+void uart_error_handle(app_uart_evt_t * p_event)
+{
+    if (p_event->evt_type == APP_UART_COMMUNICATION_ERROR)
+    {
+        APP_ERROR_HANDLER(p_event->data.error_communication);
+    }
+    else if (p_event->evt_type == APP_UART_FIFO_ERROR)
+    {
+        APP_ERROR_HANDLER(p_event->data.error_code);
+    }
+    else if (p_event->evt_type == APP_UART_TX_EMPTY)
+    {
+      uart_tx_done = true;
+    }
+}
 
 bool is_ota(void)
 {
@@ -176,6 +212,45 @@ int main(void)
   board_init();
   bootloader_init();
 
+#ifdef DEBUG_CODE_ENABLE
+  nrf_gpio_cfg_output(15);
+
+  uint32_t err_code;
+
+  const app_uart_comm_params_t comm_params =
+  {
+		  RX_PIN_NUMBER,
+		  TX_PIN_NUMBER,
+		  RTS_PIN_NUMBER,
+		  CTS_PIN_NUMBER,
+		  HWFC,
+		  false,
+#if defined (UART_PRESENT)
+		  NRF_UART_BAUDRATE_1000000
+#else
+		  NRF_UARTE_BAUDRATE_115200
+#endif
+  };
+
+  APP_UART_FIFO_INIT(&comm_params,
+		  UART_RX_BUF_SIZE,
+		  UART_TX_BUF_SIZE,
+		  uart_error_handle,
+		  APP_IRQ_PRIORITY_LOWEST,
+		  err_code);
+
+  APP_ERROR_CHECK(err_code);
+
+  /*
+  for (int k = 0; k < 6; k++)
+  {
+	  nrf_gpio_pin_toggle(15);
+	  NRFX_DELAY_MS(300);
+  }*/
+
+  TxDString("\r\nUF2 Loader Start!\r\n");
+#endif
+
   led_state(STATE_BOOTLOADER_STARTED);
 
   // When updating SoftDevice, bootloader will reset before swapping SD
@@ -190,9 +265,16 @@ int main(void)
   }
 
   /*------------- Determine DFU mode (Serial, OTA, FRESET or normal) -------------*/
+#ifdef DEBUG_CODE_ENABLE
+  TxDString("\r\nA. dfu_start = ");TxDByte16(dfu_start);
+  TxDString("\r\nB. button_pressed(BUTTON_DFU) = ");TxDByte16(button_pressed(BUTTON_DFU));
+#endif
   // DFU button pressed
   dfu_start  = dfu_start || button_pressed(BUTTON_DFU);
 
+#ifdef DEBUG_CODE_ENABLE
+  TxDString("\r\nC. dfu_start = ");TxDByte16(dfu_start);
+#endif
   // DFU + FRESET are pressed --> OTA
   _ota_dfu = _ota_dfu  || ( button_pressed(BUTTON_DFU) && button_pressed(BUTTON_FRESET) ) ;
 
@@ -201,6 +283,10 @@ int main(void)
   // App mode: register 1st reset and DFU startup (nrf52832)
   if ( ! (dfu_start || !valid_app) )
   {
+#ifdef DEBUG_CODE_ENABLE
+	TxDString("\r\n( ! (dfu_start || !valid_app) )");
+	TxDString("\r\nvalid_app = ");TxDByte16(valid_app);
+#endif
     // Register our first reset for double reset detection
     (*dbl_reset_mem) = DFU_DBL_RESET_MAGIC;
 
@@ -219,9 +305,22 @@ int main(void)
   }
 
   (*dbl_reset_mem) = 0;
-
+#ifdef DEBUG_CODE_ENABLE
+  TxDString("\r\nBefore [if ( dfu_start || !valid_app )]");
+#endif
   if ( dfu_start || !valid_app )
   {
+#ifdef DEBUG_CODE_ENABLE
+    TxDString("\r\n( dfu_start || !valid_app )");
+    TxDString("\r\nvalid_app = ");TxDByte16(valid_app);
+
+    /*
+    for (int k = 0; k < 6; k++)
+    {
+      nrf_gpio_pin_toggle(15);
+      NRFX_DELAY_MS(300);
+    }*/
+#endif
     if ( _ota_dfu )
     {
       led_state(STATE_BLE_DISCONNECTED);
@@ -457,3 +556,40 @@ void SD_EVT_IRQHandler(void)
   // Use App Scheduler to defer handling code in non-isr context
   app_sched_event_put(NULL, 0, ada_sd_task);
 }
+
+#define TxDByte app_uart_put
+
+void TxDByte16(uint8_t bSentData) {
+	uint8_t bTmp;
+
+	bTmp = ((uint8_t) (bSentData >> 4) & 0x0f) + (uint8_t) '0';
+	if (bTmp > '9')
+		bTmp += 7;
+	TxDByte(bTmp);
+	NRFX_DELAY_MS(1);
+	bTmp = (uint8_t) (bSentData & 0x0f) + (uint8_t) '0';
+	if (bTmp > '9')
+		bTmp += 7;
+	uart_tx_done = false;
+	TxDByte(bTmp);
+	NRFX_DELAY_MS(1);
+}
+
+void TxDWord16(uint16_t wSentData) {
+	TxDByte16((wSentData >> 8) & 0xff);
+	TxDByte16(wSentData & 0xff);
+}
+
+void TxDLong16(uint32_t lSentData) {
+	TxDWord16((lSentData >> 16) & 0xffff);
+	TxDWord16(lSentData & 0xffff);
+}
+
+void TxDString(char *bData) {
+	while (*bData) {
+	  uart_tx_done = false;
+		app_uart_put(*bData++);
+		NRFX_DELAY_MS(1);
+	}
+}
+

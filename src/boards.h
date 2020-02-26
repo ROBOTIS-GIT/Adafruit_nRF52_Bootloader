@@ -96,6 +96,7 @@ void led_tick(void);
 #error "At least two buttons required in the BSP (see 'BUTTONS_NUMBER')"
 #endif
 
+void power_init(uint32_t pin, uint32_t enable_state);
 void button_init(uint32_t pin);
 bool button_pressed(uint32_t pin);
 
