@@ -127,9 +127,6 @@ enum { BLE_CONN_CFG_HIGH_BANDWIDTH = 1 };
 #define UART_TX_BUF_SIZE 256                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE 256                         /**< UART RX buffer size. */
 
-#define RX_PIN_NUMBER 8
-#define TX_PIN_NUMBER 6
-
 
 #ifdef NRF52840_XXAA
   // Flash 1024 KB
@@ -313,6 +310,7 @@ int main(void)
 #ifdef DEBUG_CODE_ENABLE
     TxDString("\r\n( dfu_start || !valid_app )");
     TxDString("\r\nvalid_app = ");TxDByte16(valid_app);
+    TxDString("\r\nserial_only_dfu = ");TxDByte16(serial_only_dfu);
 
     /*
     for (int k = 0; k < 6; k++)
@@ -333,6 +331,9 @@ int main(void)
       usb_init(serial_only_dfu);
     }
 
+#ifdef DEBUG_CODE_ENABLE
+    app_uart_close();
+#endif
     // Initiate an update of the firmware.
     APP_ERROR_CHECK( bootloader_dfu_start(_ota_dfu, 0) );
 

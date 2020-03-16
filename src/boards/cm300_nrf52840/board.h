@@ -48,8 +48,8 @@
 /*------------------------------------------------------------------*/
 /* UART
  *------------------------------------------------------------------*/
-#define RX_PIN_NUMBER       8
-#define TX_PIN_NUMBER       6
+#define RX_PIN_NUMBER       27
+#define TX_PIN_NUMBER       26
 #define CTS_PIN_NUMBER      0
 #define RTS_PIN_NUMBER      0
 #define HWFC                false

@@ -17,7 +17,7 @@
 #else
 #error "Unsupported version of SoftDevice!"
 #endif
-#define USER_FLASH_END     0xAD000 // Fat Fs start here
+#define USER_FLASH_END     BOOTLOADER_REGION_START //0xAD000 // Fat Fs start here
 
 #define FLASH_PAGE_SIZE    4096
 

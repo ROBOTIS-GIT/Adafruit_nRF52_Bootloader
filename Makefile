@@ -25,8 +25,10 @@ LD_FILE      = $(SRC_PATH)/linker/$(MCU_SUB_VARIANT)_$(SD_NAME)_v$(word 1, $(sub
 
 MERGED_FNAME = $(OUTPUT_FILENAME)_$(SD_NAME)_$(SD_VERSION)
 
-GIT_VERSION = $(shell git describe --dirty --always --tags)
-GIT_SUBMODULE_VERSIONS = $(shell git submodule status | cut -d' ' -f3,4 | paste -s -d" " -)
+#GIT_VERSION = $(shell git describe --dirty --always --tags)
+#GIT_SUBMODULE_VERSIONS = $(shell git submodule status | cut -d' ' -f3,4 | paste -s -d" " -)
+GIT_VERSION = 0.3.0-8-g3666e69-dirty
+GIT_SUBMODULE_VERSIONS = lib/nrfx (v2.0.0) lib/tinyusb (legacy-1500-g23df777b)
 
 OUTPUT_FILENAME = $(BOARD)_bootloader-$(GIT_VERSION)
 
